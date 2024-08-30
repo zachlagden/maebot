@@ -168,3 +168,4 @@ cython_debug/
 # Project Specific
 errors/*.*
 config.json
+customconfig.json
