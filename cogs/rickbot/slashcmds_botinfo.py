@@ -11,6 +11,7 @@ from datetime import datetime
 # Third-party libraries
 from discord_timestamps import format_timestamp, TimestampType
 from discord.ext import commands
+from discord import app_commands
 import discord
 import requests
 
@@ -56,7 +57,7 @@ def convert_repo_url_to_api(url: str) -> str:
 
 
 # Cog
-class RickBot_BotInfoCommands(commands.Cog):
+class RickBot_BotInfoSlashCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -67,20 +68,26 @@ class RickBot_BotInfoCommands(commands.Cog):
         else:
             self.GITHUB_API = None
 
-    @commands.command(name="updates")
-    async def _updates(self, ctx):
+    async def _send_embed(self, interaction, title, description, color):
+        """Helper to send formatted Discord embeds."""
+        embed = discord.Embed(title=title, description=description, color=color)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(
+        name="updates", description="Check GitHub for the latest commits."
+    )
+    async def _updates(self, interaction: discord.Interaction):
         """
         Check GitHub for the latest commits, provides the last 5 along with other relevant information.
         """
 
         if self.GITHUB_API is None:
-            embed = discord.Embed(
-                title="Sorry!",
-                description="This command is disabled.",
-                color=ERROR_EMBED_COLOR,
+            await self._send_embed(
+                interaction,
+                "Sorry!",
+                "This command is disabled.",
+                ERROR_EMBED_COLOR,
             )
-
-            await ctx.message.reply(embed=embed, mention_author=False)
             return
 
         try:
@@ -141,30 +148,28 @@ class RickBot_BotInfoCommands(commands.Cog):
 
             embed.set_footer(text="RickBot is a project by lagden.dev.")
 
-            await ctx.message.reply(embed=embed, mention_author=False)
+            await interaction.response.send_message(embed=embed, ephemeral=False)
 
         except requests.exceptions.RequestException as e:
             # Handle specific request errors like timeouts, connection errors, etc.
-            embed = discord.Embed(
-                title="Error",
-                description="I'm sorry, there was an error fetching the latest commits. Please try again later.\nIf the problem persists, please contact the bot owner.",
-                color=ERROR_EMBED_COLOR,
+            await self._send_embed(
+                interaction,
+                "Error",
+                "I'm sorry, there was an error fetching the latest commits. Please try again later.\nIf the problem persists, please contact the bot owner.",
+                ERROR_EMBED_COLOR,
             )
-
-            await ctx.message.reply(embed=embed, mention_author=False)
 
         except ValueError as e:
             # Handle JSON decoding errors or any other data format issues
-            embed = discord.Embed(
-                title="Error",
-                description=str(e),
-                color=ERROR_EMBED_COLOR,
+            await self._send_embed(
+                interaction,
+                "Error",
+                str(e),
+                ERROR_EMBED_COLOR,
             )
 
-            await ctx.message.reply(embed=embed, mention_author=False)
-
-    @commands.command(name="ping")
-    async def _ping(self, ctx):
+    @app_commands.command(name="ping", description="Check the bot's latency.")
+    async def _ping(self, interaction: discord.Interaction):
         """
         Check the bot's latency.
         """
@@ -174,8 +179,8 @@ class RickBot_BotInfoCommands(commands.Cog):
             color=MAIN_EMBED_COLOR,
         )
 
-        await ctx.message.reply(embed=embed, mention_author=False)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(RickBot_BotInfoCommands(bot))
+    await bot.add_cog(RickBot_BotInfoSlashCommands(bot))
